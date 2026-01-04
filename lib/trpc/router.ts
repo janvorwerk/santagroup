@@ -18,7 +18,7 @@ export const appRouter = router({
   poolUpdateName: publicProcedure
     .input(
       z.object({
-        id: z.string().uuid(),
+        id: z.uuid(),
         name: z.string().min(1),
       })
     )
@@ -28,14 +28,14 @@ export const appRouter = router({
 
   // Get pool with groups and players (nested)
   poolGetFull: publicProcedure
-    .input(z.string().uuid())
+    .input(z.uuid())
     .query(async (opts) => {
       return await poolService.getPoolFull(opts.input);
     }),
 
   // Get multiple pools with groups and players (nested)
   poolGetFullMany: publicProcedure
-    .input(z.array(z.string().uuid()))
+    .input(z.array(z.uuid()))
     .query(async (opts) => {
       return await poolService.getPoolsFull(opts.input);
     }),
@@ -44,7 +44,7 @@ export const appRouter = router({
   groupCreate: publicProcedure
     .input(
       z.object({
-        poolId: z.string().uuid(),
+        poolId: z.uuid(),
       })
     )
     .mutation(async (opts) => {
@@ -67,7 +67,7 @@ export const appRouter = router({
   playerUpdateGroup: publicProcedure
     .input(
       z.object({
-        playerId: z.string().uuid(),
+        playerId: z.uuid(),
         groupId: z.number().int(),
       })
     )
@@ -77,16 +77,49 @@ export const appRouter = router({
 
   // Get player by ID with their assignment
   playerGetById: publicProcedure
-    .input(z.string().uuid())
+    .input(z.uuid())
     .query(async (opts) => {
       return await poolService.getPlayerById(opts.input);
     }),
 
   // Execute drawing algorithm
   poolDraw: publicProcedure
-    .input(z.string().uuid())
+    .input(z.uuid())
     .mutation(async (opts) => {
       return await poolService.drawPool(opts.input);
+    }),
+
+  // Delete a pool
+  poolDelete: publicProcedure
+    .input(
+      z.object({
+        id: z.uuid(),
+      })
+    )
+    .mutation(async (opts) => {
+      return await poolService.deletePool(opts.input.id);
+    }),
+
+  // Delete a group
+  groupDelete: publicProcedure
+    .input(
+      z.object({
+        id: z.number().int(),
+      })
+    )
+    .mutation(async (opts) => {
+      return await poolService.deleteGroup(opts.input.id);
+    }),
+
+  // Delete a player
+  playerDelete: publicProcedure
+    .input(
+      z.object({
+        id: z.uuid(),
+      })
+    )
+    .mutation(async (opts) => {
+      return await poolService.deletePlayer(opts.input.id);
     }),
 });
 

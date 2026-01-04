@@ -1,10 +1,10 @@
-import type { Metadata } from 'next';
-import './globals.css';
-import { TRPCProvider } from '@/lib/trpc/providers';
+import { TRPCProvider } from "@/lib/trpc/providers";
+import type { Metadata } from "next";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: 'Santa App',
-  description: 'A modern web application built with Next.js 16',
+  title: "Santa App",
+  description: "Organise tes échange de cadeaux",
 };
 
 export default function RootLayout({
@@ -13,11 +13,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body>
+    <html lang="fr" className="h-full overflow-y-auto p-4">
+      <body className="h-full">
         <TRPCProvider>{children}</TRPCProvider>
       </body>
     </html>
   );
 }
-

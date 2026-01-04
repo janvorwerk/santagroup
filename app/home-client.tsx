@@ -21,7 +21,7 @@ export function HomeClient() {
     },
     onError: (error) => {
       console.error("Failed to create pool", error);
-      alert("Failed to create pool. Please try again.");
+      alert("Échec de la création du tirage. Veuillez réessayer.");
     },
   });
 
@@ -72,7 +72,7 @@ export function HomeClient() {
   const formatDate = (date: Date | string) => {
     try {
       const dateObj = typeof date === "string" ? new Date(date) : date;
-      return dateObj.toLocaleDateString("en-US", {
+      return dateObj.toLocaleDateString("fr-FR", {
         year: "numeric",
         month: "short",
         day: "numeric",
@@ -83,21 +83,21 @@ export function HomeClient() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-8 bg-linear-to-br from-blue-50 to-indigo-100">
+    <main className="flex flex-col items-center justify-center">
       <div className="max-w-2xl w-full space-y-8">
         <div className="text-center space-y-4">
           <h1 className="text-5xl font-bold text-gray-900">Secret Santa</h1>
-          <p className="text-xl text-gray-600">Organize your gift exchange</p>
+          <p className="text-xl text-gray-600">Organise tes échanges de cadeaux</p>
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-8 space-y-6">
           <div className="space-y-4">
-            <h2 className="text-2xl font-semibold text-gray-800">Create New Pool</h2>
+            <h2 className="text-2xl font-semibold text-gray-800">Créer un nouveau tirage</h2>
             <div className="flex gap-2 items-end">
               <div className="flex-1">
                 <TextField
-                  label="Pool Name"
-                  placeholder="Enter pool name"
+                  label="Nom du tirage"
+                  placeholder="Entrer le nom du tirage"
                   value={poolName}
                   onChange={setPoolName}
                   onKeyDown={(e) => {
@@ -111,16 +111,16 @@ export function HomeClient() {
                 onPress={handleCreatePool}
                 isDisabled={!poolName.trim() || createPoolMutation.isPending}
               >
-                {createPoolMutation.isPending ? "Creating..." : "Create"}
+                {createPoolMutation.isPending ? "En cours..." : "Créer"}
               </Button>
             </div>
           </div>
 
-          {recentPoolIds.length > 0 && (
+          {recentPools.length > 0 && (
             <div className="space-y-4 pt-6 border-t border-gray-200">
-              <h2 className="text-2xl font-semibold text-gray-800">Recent Pools</h2>
+              <h2 className="text-2xl font-semibold text-gray-800">Tirages récents</h2>
               {isLoadingPools ? (
-                <div className="text-gray-500">Loading...</div>
+                <div className="text-gray-500">Chargement…</div>
               ) : (
                 <div className="space-y-2">
                   {recentPools.map((pool) => (

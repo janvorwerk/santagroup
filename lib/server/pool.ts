@@ -1,21 +1,23 @@
-import { db } from '@/lib/db';
-import { pool, group, player } from '@/lib/db/schema';
-import { eq, inArray } from 'drizzle-orm';
+import { db } from "@/lib/db";
+import { pool, group, player } from "@/lib/db/schema";
+import { eq, inArray, sql, and, desc } from "drizzle-orm";
+
+type GroupWithPlayers = {
+  id: number;
+  poolId: string | null;
+  players: Array<{
+    id: string;
+    name: string;
+    groupId: number;
+    toId: string | null;
+  }>;
+};
 
 export interface PoolWithGroupsAndPlayers {
   id: string;
   name: string;
   createdAt: Date;
-  groups: Array<{
-    id: number;
-    poolId: string | null;
-    players: Array<{
-      id: string;
-      name: string;
-      groupId: number;
-      toId: string | null;
-    }>;
-  }>;
+  groups: GroupWithPlayers[];
 }
 
 /**
@@ -35,11 +37,7 @@ export async function createPool(name: string) {
  * Update pool name
  */
 export async function updatePoolName(id: string, name: string) {
-  const result = await db
-    .update(pool)
-    .set({ name })
-    .where(eq(pool.id, id))
-    .returning();
+  const result = await db.update(pool).set({ name }).where(eq(pool.id, id)).returning();
   return result[0];
 }
 
@@ -47,37 +45,81 @@ export async function updatePoolName(id: string, name: string) {
  * Get pool with groups and players (nested)
  */
 export async function getPoolFull(poolId: string): Promise<PoolWithGroupsAndPlayers | null> {
-  const poolData = await db.select().from(pool).where(eq(pool.id, poolId)).limit(1);
-  if (!poolData[0]) return null;
-
-  const groups = await db.select().from(group).where(eq(group.poolId, poolId));
-
-  // Get all players for groups in this pool using join
-  const allPlayersForPool = await db
+  // CTE: Players aggregated by group
+  const playersByGroup = db
     .select({
-      player: player,
-      group: group,
+      groupId: player.groupId,
+      players: sql<GroupWithPlayers["players"]>`
+        json_agg(
+          jsonb_build_object(
+            'id', ${player.id},
+            'name', ${player.name},
+            'groupId', ${player.groupId},
+            'toId', ${player.toId}
+          )
+        order by ${player.name}
+        )
+      `.as("players"),
     })
     .from(player)
-    .innerJoin(group, eq(player.groupId, group.id))
-    .where(eq(group.poolId, poolId));
+    .groupBy(player.groupId)
+    .as("players_by_group");
 
-  // Group players by groupId
-  const playersByGroup = new Map<number, typeof player.$inferSelect[]>();
-  for (const row of allPlayersForPool) {
-    const groupId = row.player.groupId;
-    if (!playersByGroup.has(groupId)) {
-      playersByGroup.set(groupId, []);
-    }
-    playersByGroup.get(groupId)!.push(row.player);
-  }
+  // CTE: Groups with their players
+  const groupsWithPlayers = db
+    .select({
+      id: group.id,
+      poolId: group.poolId,
+      players: sql<GroupWithPlayers["players"]>`
+        COALESCE(${playersByGroup.players}, '[]'::json)
+      `.as("players"),
+    })
+    .from(group)
+    .leftJoin(playersByGroup, eq(group.id, playersByGroup.groupId))
+    .where(eq(group.poolId, poolId))
+    .as("groups_with_players");
+
+  // CTE: Groups aggregated by pool
+  const groupsByPool = db
+    .select({
+      poolId: groupsWithPlayers.poolId,
+      groups: sql<GroupWithPlayers[]>`
+        json_agg(
+          jsonb_build_object(
+            'id', ${groupsWithPlayers.id},
+            'poolId', ${groupsWithPlayers.poolId},
+            'players', ${groupsWithPlayers.players}
+          )
+          order by ${groupsWithPlayers.id}
+        )
+      `.as("groups"),
+    })
+    .from(groupsWithPlayers)
+    .groupBy(groupsWithPlayers.poolId)
+    .as("groups_by_pool");
+
+  // Main query: pool with aggregated groups
+  const result = await db
+    .select({
+      id: pool.id,
+      name: pool.name,
+      createdAt: pool.createdAt,
+      groups: sql<GroupWithPlayers[]>`
+        COALESCE(${groupsByPool.groups}, '[]'::json)
+      `.as("groups"),
+    })
+    .from(pool)
+    .leftJoin(groupsByPool, eq(pool.id, groupsByPool.poolId))
+    .where(eq(pool.id, poolId))
+    .limit(1);
+
+  if (!result[0]) return null;
 
   return {
-    ...poolData[0],
-    groups: groups.map((g) => ({
-      ...g,
-      players: playersByGroup.get(g.id) || [],
-    })),
+    id: result[0].id,
+    name: result[0].name,
+    createdAt: result[0].createdAt,
+    groups: (result[0].groups || []) as GroupWithPlayers[],
   };
 }
 
@@ -87,50 +129,78 @@ export async function getPoolFull(poolId: string): Promise<PoolWithGroupsAndPlay
 export async function getPoolsFull(poolIds: string[]): Promise<PoolWithGroupsAndPlayers[]> {
   if (poolIds.length === 0) return [];
 
-  const poolsData = await db.select().from(pool).where(inArray(pool.id, poolIds));
-  if (poolsData.length === 0) return [];
-
-  const poolIdsSet = new Set(poolsData.map((p) => p.id));
-
-  const groups = await db.select().from(group).where(inArray(group.poolId, poolIds));
-
-  // Get all players for groups in these pools using join
-  const allPlayersForPools = await db
+  // CTE: Players aggregated by group
+  const playersByGroup = db
     .select({
-      player: player,
-      group: group,
+      groupId: player.groupId,
+      players: sql<GroupWithPlayers["players"]>`
+        json_agg(
+          jsonb_build_object(
+            'id', ${player.id},
+            'name', ${player.name},
+            'groupId', ${player.groupId},
+            'toId', ${player.toId}
+          )
+        order by ${player.name}
+        )
+      `.as("players"),
     })
     .from(player)
-    .innerJoin(group, eq(player.groupId, group.id))
-    .where(inArray(group.poolId, poolIds));
+    .groupBy(player.groupId)
+    .as("players_by_group");
 
-  // Group players by groupId
-  const playersByGroup = new Map<number, typeof player.$inferSelect[]>();
-  for (const row of allPlayersForPools) {
-    const groupId = row.player.groupId;
-    if (!playersByGroup.has(groupId)) {
-      playersByGroup.set(groupId, []);
-    }
-    playersByGroup.get(groupId)!.push(row.player);
-  }
+  // CTE: Groups with their players
+  const groupsWithPlayers = db
+    .select({
+      id: group.id,
+      poolId: group.poolId,
+      players: sql<GroupWithPlayers["players"]>`
+        COALESCE(${playersByGroup.players}, '[]'::json)
+      `.as("players"),
+    })
+    .from(group)
+    .leftJoin(playersByGroup, eq(group.id, playersByGroup.groupId))
+    .as("groups_with_players");
 
-  // Group groups by poolId
-  const groupsByPool = new Map<string, typeof groups>();
-  for (const g of groups) {
-    if (!g.poolId) continue;
-    if (!groupsByPool.has(g.poolId)) {
-      groupsByPool.set(g.poolId, []);
-    }
-    groupsByPool.get(g.poolId)!.push(g);
-  }
+  // CTE: Groups aggregated by pool
+  const groupsByPool = db
+    .select({
+      poolId: groupsWithPlayers.poolId,
+      groups: sql<GroupWithPlayers[]>`
+        json_agg(
+          jsonb_build_object(
+            'id', ${groupsWithPlayers.id},
+            'poolId', ${groupsWithPlayers.poolId},
+            'players', ${groupsWithPlayers.players}
+          )
+          order by ${groupsWithPlayers.id}
+        )
+      `.as("groups"),
+    })
+    .from(groupsWithPlayers)
+    .groupBy(groupsWithPlayers.poolId)
+    .as("groups_by_pool");
 
-  // Build result array maintaining order of input poolIds
-  return poolsData.map((poolData) => ({
-    ...poolData,
-    groups: (groupsByPool.get(poolData.id) || []).map((g) => ({
-      ...g,
-      players: playersByGroup.get(g.id) || [],
-    })),
+  // Main query: pools with aggregated groups
+  const result = await db
+    .select({
+      id: pool.id,
+      name: pool.name,
+      createdAt: pool.createdAt,
+      groups: sql<GroupWithPlayers[]>`
+        COALESCE(${groupsByPool.groups}, '[]'::json)
+      `.as("groups"),
+    })
+    .from(pool)
+    .leftJoin(groupsByPool, eq(pool.id, groupsByPool.poolId))
+    .where(inArray(pool.id, poolIds))
+    .orderBy(desc(pool.createdAt));
+
+  return result.map((row) => ({
+    id: row.id,
+    name: row.name,
+    createdAt: row.createdAt,
+    groups: (row.groups || []) as GroupWithPlayers[],
   }));
 }
 
@@ -165,12 +235,29 @@ export async function createPlayer(groupId: number, name: string) {
  * Move player between groups
  */
 export async function updatePlayerGroup(playerId: string, groupId: number) {
-  // FIXME: make sure the player can only be moved to a group in the same pool
+  // Build scalar subqueries using Drizzle - select the column directly
+  const currentGroupPool = sql`
+    (SELECT ${group.poolId}
+     FROM ${group}
+     INNER JOIN ${player} ON ${group.id} = ${player.groupId}
+     WHERE ${player.id} = ${playerId}
+     LIMIT 1)
+  `;
+
+  const targetGroupPool = sql`
+    (SELECT ${group.poolId}
+     FROM ${group}
+     WHERE ${group.id} = ${groupId}
+     LIMIT 1)
+  `;
+
+  // Update only if both groups are in the same pool
   const result = await db
     .update(player)
     .set({ groupId })
-    .where(eq(player.id, playerId))
+    .where(and(eq(player.id, playerId), sql`${currentGroupPool} = ${targetGroupPool}`))
     .returning();
+
   return result[0];
 }
 
@@ -181,10 +268,9 @@ export async function getPlayerById(playerId: string) {
   const playerData = await db.select().from(player).where(eq(player.id, playerId)).limit(1);
   if (!playerData[0]) return null;
 
-  const assignedTo =
-    playerData[0].toId
-      ? await db.select().from(player).where(eq(player.id, playerData[0].toId)).limit(1)
-      : null;
+  const assignedTo = playerData[0].toId
+    ? await db.select().from(player).where(eq(player.id, playerData[0].toId)).limit(1)
+    : null;
 
   return {
     ...playerData[0],
@@ -208,7 +294,7 @@ export async function drawPool(poolId: string) {
   const players = allPlayersForPool.map((row) => row.player);
 
   if (players.length < 2) {
-    throw new Error('Need at least 2 players to draw');
+    throw new Error("Need at least 2 players to draw");
   }
 
   // Group players by groupId
@@ -262,14 +348,36 @@ export async function drawPool(poolId: string) {
   }
 
   if (unassigned.length > 0) {
-    throw new Error('Could not find valid assignments. Try adjusting groups.');
+    throw new Error("Could not find valid assignments. Try adjusting groups.");
   }
 
   // Update database with assignments
-  for (const [playerId, toId] of assignments.entries()) {
-    await db.update(player).set({ toId }).where(eq(player.id, playerId));
-  }
+  await db.transaction(async (tx) => {
+    for (const [playerId, toId] of assignments.entries()) {
+      await tx.update(player).set({ toId }).where(eq(player.id, playerId));
+    }
+  });
 
   return { success: true, assignments: Object.fromEntries(assignments) };
 }
 
+/**
+ * Delete a pool (cascades to groups and players via DB constraints)
+ */
+export async function deletePool(poolId: string) {
+  await db.delete(pool).where(eq(pool.id, poolId));
+}
+
+/**
+ * Delete a group (cascades to players via DB constraints)
+ */
+export async function deleteGroup(groupId: number) {
+  await db.delete(group).where(eq(group.id, groupId));
+}
+
+/**
+ * Delete a player
+ */
+export async function deletePlayer(playerId: string) {
+  await db.delete(player).where(eq(player.id, playerId));
+}

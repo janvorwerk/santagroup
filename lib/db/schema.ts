@@ -27,12 +27,10 @@ export const player = pgTable(
     toId: uuid("to_id"),
   },
 
-  (table) => {
-    return {
-      parentReference: foreignKey({
-        columns: [table.toId],
-        foreignColumns: [table.id],
-      }),
-    };
-  }
+  (table) => [
+    foreignKey({
+      columns: [table.toId],
+      foreignColumns: [table.id],
+    }),
+  ]
 );

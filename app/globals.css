@@ -15,7 +15,7 @@
 }
 
 body {
-  @apply bg-white dark:bg-neutral-900;
+  @apply bg-zinc-400 dark:bg-zinc-700;
   color-scheme: dark light;
 }
 
