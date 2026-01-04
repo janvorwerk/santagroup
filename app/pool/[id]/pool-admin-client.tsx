@@ -303,12 +303,12 @@ export function PoolAdminClient({ poolId, cheatMode }: { poolId: string; cheatMo
               const mailtoUrl = `mailto:?subject=${encodeURIComponent(
                 `${player.name}, participe au tirage de ${poolData.name} !`
               )}&body=${encodeURIComponent(
-                `Caro, pour participer au tirage de ${poolData.name}, clique sur ce lien ${playUrl}`
+                `${player.name}, pour participer au tirage de ${poolData.name}, clique sur ce lien ${playUrl}`
               )}`;
               return (
                 <div key={player.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded">
                   <span className="font-medium flex-1">{player.name}</span>
-                  <a href={mailtoUrl} target="santa-mail" className={button({ variant: "primary" })}>
+                  <a href={mailtoUrl} target="santagroup" className={button({ variant: "primary" })}>
                     Envoyer un e-mail
                   </a>
                   <Button

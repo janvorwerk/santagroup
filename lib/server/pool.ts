@@ -293,7 +293,7 @@ type Player = {
  */
 export function performDraw(players: Player[]): Record<string, string> {
   if (players.length < 2) {
-    throw new Error("Need at least 2 players to draw");
+    throw new Error("Il faut au moins deux joueurs pour tirer au sort");
   }
 
   // Group players by groupId
@@ -305,6 +305,12 @@ export function performDraw(players: Player[]): Record<string, string> {
     playersByGroup.get(p.groupId)!.push(p);
   }
 
+  // Check if there's at least one group with players that can be matched
+  // (i.e., there are at least 2 groups)
+  if (playersByGroup.size < 2) {
+    throw new Error("Je n'ai pas réussi à trouver de combinaison : essaie de changer les groupes");
+  }
+
   // Build valid targets for each player (exclude same group)
   const validTargets = new Map<string, Player[]>();
   for (const p of players) {
@@ -312,45 +318,77 @@ export function performDraw(players: Player[]): Record<string, string> {
     validTargets.set(p.id, targets);
   }
 
-  // Drawing algorithm: ensure one-to-one matching with constraints
+  // Check if each player has at least one valid target
+  for (const p of players) {
+    const targets = validTargets.get(p.id) || [];
+    if (targets.length === 0) {
+      throw new Error("Je n'ai pas réussi à trouver de combinaison : essaie de changer les groupes");
+    }
+  }
+
+  // Use backtracking algorithm to find a valid assignment
   const assignments = new Map<string, string>(); // playerId -> toId
   const used = new Set<string>(); // toIds that have been assigned
 
-  // Try to assign each player
-  const unassigned = [...players];
-  let attempts = 0;
-  const maxAttempts = 1000;
+  // Shuffle players for randomness
+  const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
 
-  while (unassigned.length > 0 && attempts < maxAttempts) {
-    attempts++;
-    const currentPlayer = unassigned[0];
-    const targets = validTargets.get(currentPlayer.id) || [];
-    const availableTargets = targets.filter((t) => !used.has(t.id) && t.id !== currentPlayer.id);
-
-    if (availableTargets.length === 0) {
-      // No valid targets, need to backtrack or retry
-      // Reset and try again
-      assignments.clear();
-      used.clear();
-      unassigned.length = 0;
-      unassigned.push(...players);
-      continue;
+  /**
+   * Backtracking function to find a valid assignment
+   * @param index Current index in the players array
+   * @returns true if a valid assignment was found, false otherwise
+   */
+  function backtrack(index: number): boolean {
+    // Base case: all players have been assigned
+    if (index >= shuffledPlayers.length) {
+      return true;
     }
 
-    // Randomly select from available targets
-    const randomIndex = Math.floor(Math.random() * availableTargets.length);
-    const selectedTarget = availableTargets[randomIndex];
+    const currentPlayer = shuffledPlayers[index];
+    const targets = validTargets.get(currentPlayer.id) || [];
+    
+    // Shuffle targets for randomness
+    const shuffledTargets = [...targets].sort(() => Math.random() - 0.5);
+    
+    // Try each available target
+    for (const target of shuffledTargets) {
+      // Skip if target is already used or is the same player
+      if (used.has(target.id) || target.id === currentPlayer.id) {
+        continue;
+      }
 
-    assignments.set(currentPlayer.id, selectedTarget.id);
-    used.add(selectedTarget.id);
-    unassigned.shift();
+      // Try this assignment
+      assignments.set(currentPlayer.id, target.id);
+      used.add(target.id);
+
+      // Recursively try to assign remaining players
+      if (backtrack(index + 1)) {
+        return true;
+      }
+
+      // Backtrack: remove this assignment and try next target
+      assignments.delete(currentPlayer.id);
+      used.delete(target.id);
+    }
+
+    // No valid assignment found for this player
+    return false;
   }
 
-  if (unassigned.length > 0) {
-    throw new Error("Could not find valid assignments. Try adjusting groups.");
+  // Try to find a solution with multiple random shuffles
+  const maxAttempts = 100;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    assignments.clear();
+    used.clear();
+    shuffledPlayers.sort(() => Math.random() - 0.5);
+
+    if (backtrack(0)) {
+      return Object.fromEntries(assignments);
+    }
   }
 
-  return Object.fromEntries(assignments);
+  // If we couldn't find a solution after multiple attempts, it likely doesn't exist
+  throw new Error("Je n'ai pas réussi à trouver de combinaison : essaie de changer les groupes");
 }
 
 /**
