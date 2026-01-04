@@ -278,27 +278,26 @@ export async function getPlayerById(playerId: string) {
   };
 }
 
+type Player = {
+  id: string;
+  name: string;
+  groupId: number;
+  toId: string | null;
+};
+
 /**
- * Execute drawing algorithm
+ * Perform the drawing algorithm without database access
+ * @param players Array of players to assign
+ * @returns Map of playerId -> toId assignments
+ * @throws Error if less than 2 players or no valid assignments can be found
  */
-export async function drawPool(poolId: string) {
-  // Get all players in the pool
-  const allPlayersForPool = await db
-    .select({
-      player: player,
-    })
-    .from(player)
-    .innerJoin(group, eq(player.groupId, group.id))
-    .where(eq(group.poolId, poolId));
-
-  const players = allPlayersForPool.map((row) => row.player);
-
+export function performDraw(players: Player[]): Record<string, string> {
   if (players.length < 2) {
     throw new Error("Need at least 2 players to draw");
   }
 
   // Group players by groupId
-  const playersByGroup = new Map<number, typeof players>();
+  const playersByGroup = new Map<number, Player[]>();
   for (const p of players) {
     if (!playersByGroup.has(p.groupId)) {
       playersByGroup.set(p.groupId, []);
@@ -307,7 +306,7 @@ export async function drawPool(poolId: string) {
   }
 
   // Build valid targets for each player (exclude same group)
-  const validTargets = new Map<string, typeof players>();
+  const validTargets = new Map<string, Player[]>();
   for (const p of players) {
     const targets = players.filter((target) => target.groupId !== p.groupId);
     validTargets.set(p.id, targets);
@@ -351,14 +350,35 @@ export async function drawPool(poolId: string) {
     throw new Error("Could not find valid assignments. Try adjusting groups.");
   }
 
+  return Object.fromEntries(assignments);
+}
+
+/**
+ * Execute drawing algorithm
+ */
+export async function drawPool(poolId: string) {
+  // Get all players in the pool
+  const allPlayersForPool = await db
+    .select({
+      player: player,
+    })
+    .from(player)
+    .innerJoin(group, eq(player.groupId, group.id))
+    .where(eq(group.poolId, poolId));
+
+  const players = allPlayersForPool.map((row) => row.player);
+
+  // Perform the draw
+  const assignments = performDraw(players);
+
   // Update database with assignments
   await db.transaction(async (tx) => {
-    for (const [playerId, toId] of assignments.entries()) {
+    for (const [playerId, toId] of Object.entries(assignments)) {
       await tx.update(player).set({ toId }).where(eq(player.id, playerId));
     }
   });
 
-  return { success: true, assignments: Object.fromEntries(assignments) };
+  return { success: true, assignments };
 }
 
 /**

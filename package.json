@@ -12,6 +12,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "jest",
+    "test:watch": "jest --watch",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:drop": "drizzle-kit drop",
@@ -19,7 +21,6 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "postgres": "^3.4.7",
     "@tanstack/react-query": "~5.90.16",
     "@trpc/client": "^11.8.1",
     "@trpc/react-query": "~11.8.1",
@@ -28,6 +29,7 @@
     "drizzle-orm": "^0.36.0",
     "lucide-react": "~0.562.0",
     "next": "^16.0.0",
+    "postgres": "^3.4.7",
     "react": "^19.0.0",
     "react-aria": "~3.45.0",
     "react-aria-components": "1.14.0",
@@ -39,7 +41,9 @@
     "zod": "~4.3.5"
   },
   "devDependencies": {
+    "@jest/globals": "~30.2.0",
     "@tailwindcss/postcss": "~4.1.18",
+    "@types/jest": "~30.0.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
@@ -47,8 +51,10 @@
     "drizzle-kit": "^0.30.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "^16.0.0",
+    "jest": "~30.2.0",
     "postcss": "^8.4.0",
     "tailwindcss": "^4.0.0",
+    "ts-jest": "~29.4.6",
     "typescript": "^5.7.0"
   }
 }
