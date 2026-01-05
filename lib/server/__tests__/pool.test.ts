@@ -28,7 +28,7 @@ describe("performDraw", () => {
     expect(() => performDraw(persons)).toThrow("Il faut au moins deux personnes pour tirer au sort");
   });
 
-  it("should throw error when all persons are in the same group", () => {
+  it("should successfully assign persons when all persons are in the same group", () => {
     const persons: Person[] = [
       {
         id: "person-1",
@@ -44,11 +44,67 @@ describe("performDraw", () => {
       },
     ];
 
-    // This should fail because all persons are in the same group
-    // and there are no valid targets (can't assign to same group)
-    expect(() => performDraw(persons)).toThrow(
-      "Je n'ai pas réussi à trouver de combinaison : essaie de changer les groupes"
-    );
+    // When only one group exists, there is no group constraint
+    const assignments = performDraw(persons);
+
+    expect(assignments).toBeDefined();
+    expect(Object.keys(assignments)).toHaveLength(2);
+
+    // Verify that assignments are one-to-one (no duplicates)
+    const assignedToIds = Object.values(assignments);
+    expect(new Set(assignedToIds).size).toBe(assignedToIds.length);
+
+    // Verify that persons are assigned to each other (no group constraint)
+    expect(assignments["person-1"]).toBe("person-2");
+    expect(assignments["person-2"]).toBe("person-1");
+  });
+
+  it("should successfully assign persons when all persons are in a single group (more than 2)", () => {
+    const persons: Person[] = [
+      {
+        id: "person-1",
+        name: "Person 1",
+        groupId: 1,
+        toId: null,
+      },
+      {
+        id: "person-2",
+        name: "Person 2",
+        groupId: 1,
+        toId: null,
+      },
+      {
+        id: "person-3",
+        name: "Person 3",
+        groupId: 1,
+        toId: null,
+      },
+      {
+        id: "person-4",
+        name: "Person 4",
+        groupId: 1,
+        toId: null,
+      },
+    ];
+
+    // When only one group exists, there is no group constraint
+    const assignments = performDraw(persons);
+
+    expect(assignments).toBeDefined();
+    expect(Object.keys(assignments)).toHaveLength(4);
+
+    // Verify that assignments are one-to-one (no duplicates)
+    const assignedToIds = Object.values(assignments);
+    expect(new Set(assignedToIds).size).toBe(assignedToIds.length);
+
+    // Verify that all persons are assigned (no group constraint)
+    const personsMap = new Map(persons.map((p) => [p.id, p]));
+    for (const [personId, assignedToId] of Object.entries(assignments)) {
+      expect(assignedToId).toBeDefined();
+      expect(personsMap.has(assignedToId)).toBe(true);
+      // All persons are in the same group, so assignments within the same group are allowed
+      expect(assignedToId).not.toBe(personId); // But not to themselves
+    }
   });
 
   it("should successfully assign persons from different groups", () => {
@@ -76,7 +132,7 @@ describe("performDraw", () => {
     const assignedToIds = Object.values(assignments);
     expect(new Set(assignedToIds).size).toBe(assignedToIds.length);
 
-    // Verify that no person is assigned to someone in their own group
+    // Verify that no person is assigned to someone in their own group (when multiple groups exist)
     expect(assignments["person-1"]).toBe("person-2");
     expect(assignments["person-2"]).toBe("person-1");
   });
@@ -118,7 +174,7 @@ describe("performDraw", () => {
     const assignedToIds = Object.values(assignments);
     expect(new Set(assignedToIds).size).toBe(assignedToIds.length);
 
-    // Verify no person is assigned to someone in their own group
+    // Verify no person is assigned to someone in their own group (when multiple groups exist)
     const personsMap = new Map(persons.map((p) => [p.id, p]));
     for (const [personId, assignedToId] of Object.entries(assignments)) {
       const person = personsMap.get(personId)!;
@@ -176,7 +232,7 @@ describe("performDraw", () => {
     const assignedToIds = Object.values(assignments);
     expect(new Set(assignedToIds).size).toBe(assignedToIds.length);
 
-    // Verify no person is assigned to someone in their own group
+    // Verify no person is assigned to someone in their own group (when multiple groups exist)
     const personsMap = new Map(persons.map((p) => [p.id, p]));
     for (const [personId, assignedToId] of Object.entries(assignments)) {
       const person = personsMap.get(personId)!;
@@ -234,7 +290,7 @@ describe("performDraw", () => {
     const assignedToIds = Object.values(assignments);
     expect(new Set(assignedToIds).size).toBe(assignedToIds.length);
 
-    // Verify no person is assigned to someone in their own group
+    // Verify no person is assigned to someone in their own group (when multiple groups exist)
     const personsMap = new Map(persons.map((p) => [p.id, p]));
     for (const [personId, assignedToId] of Object.entries(assignments)) {
       const person = personsMap.get(personId)!;
@@ -272,7 +328,7 @@ describe("performDraw", () => {
     const assignedToIds = Object.values(assignments);
     expect(new Set(assignedToIds).size).toBe(assignedToIds.length);
 
-    // Verify no person is assigned to someone in their own group
+    // Verify no person is assigned to someone in their own group (when multiple groups exist)
     const personsMap = new Map(persons.map((p) => [p.id, p]));
     for (const [personId, assignedToId] of Object.entries(assignments)) {
       const person = personsMap.get(personId)!;

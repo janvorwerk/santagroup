@@ -305,17 +305,22 @@ export function performDraw(persons: Person[]): Record<string, string> {
     personsByGroup.get(p.groupId)!.push(p);
   }
 
-  // Check if there's at least one group with persons that can be matched
-  // (i.e., there are at least 2 groups)
-  if (personsByGroup.size < 2) {
-    throw new Error("Je n'ai pas réussi à trouver de combinaison : essaie de changer les groupes");
-  }
-
-  // Build valid targets for each person (exclude same group)
+  // Build valid targets for each person
+  // If only one group exists, allow assignments to anyone (no group constraint)
+  // Otherwise, exclude same group assignments
   const validTargets = new Map<string, Person[]>();
+  const isSingleGroup = personsByGroup.size === 1;
+  
   for (const p of persons) {
-    const targets = persons.filter((target) => target.groupId !== p.groupId);
-    validTargets.set(p.id, targets);
+    if (isSingleGroup) {
+      // No group constraint when only one group exists
+      const targets = persons.filter((target) => target.id !== p.id);
+      validTargets.set(p.id, targets);
+    } else {
+      // Exclude same group when multiple groups exist
+      const targets = persons.filter((target) => target.groupId !== p.groupId);
+      validTargets.set(p.id, targets);
+    }
   }
 
   // Check if each person has at least one valid target
