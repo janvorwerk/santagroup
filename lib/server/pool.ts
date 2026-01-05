@@ -1,3 +1,12 @@
+/**
+ * Copyright (C) 2026 Jan Vorwerk
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ */
+
 import { db } from "@/lib/db";
 import { pool, group, person } from "@/lib/db/schema";
 import { eq, inArray, sql, and, desc } from "drizzle-orm";
