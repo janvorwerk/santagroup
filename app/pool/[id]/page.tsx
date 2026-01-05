@@ -7,7 +7,7 @@
  * (at your option) any later version.
  */
 
-import { PoolClient } from "./pool-admin-client";
+import { PoolClient } from "./pool-client";
 
 export default async function PoolAdminPage({ params }: { params: Promise<{ id: string }> }) {
   // Await params as it's now a Promise in Next.js

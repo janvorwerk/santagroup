@@ -16,7 +16,7 @@ import { ListBox, ListBoxItem } from "@/lib/components/ListBox";
 import { Modal } from "@/lib/components/Modal";
 import { TextField } from "@/lib/components/TextField";
 import { trpc } from "@/lib/trpc/client";
-import { Trash2 } from "lucide-react";
+import { GripVertical, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useState } from "react";
 import { isTextDropItem, useDragAndDrop } from "react-aria-components";
@@ -44,7 +44,7 @@ interface PoolData {
 
 const PERSON_DRAG_TYPE = "application/x-santa-person";
 
-export function PoolAdminClient({ poolId, cheatMode }: { poolId: string; cheatMode: boolean }) {
+export function PoolClient({ poolId, cheatMode }: { poolId: string; cheatMode: boolean }) {
   const router = useRouter();
   const [poolName, setPoolName] = useState("");
   const [newPersonNames, setNewPersonNames] = useState<Map<number, string>>(new Map());
@@ -472,13 +472,22 @@ function GroupListBox({
         }}
         className={cn("min-h-[200px] flex-1 w-full", isDrawn && "opacity-50")}
       >
-        {(person: Person) => (
-          <ListBoxItem id={person.id} textValue={person.name}>
-            <div className="flex items-center justify-between w-full">
+        {(person: Person) => {
+          const isSelected = selectedPersonId === person.id;
+          return (
+            <ListBoxItem
+              id={person.id}
+              textValue={person.name}
+              className={cn(
+                "flex items-center justify-start w-full gap-2 px-0",
+                isSelected && !isDrawn && "cursor-grab active:cursor-grabbing"
+              )}
+            >
+              {!isDrawn && <GripVertical className="w-auto h-4 flex-none text-gray-400 shrink-0" aria-hidden="true" />}
               <span>{person.name}</span>
-            </div>
-          </ListBoxItem>
-        )}
+            </ListBoxItem>
+          );
+        }}
       </ListBox>
       {!isDrawn && (
         <div className="flex gap-2">

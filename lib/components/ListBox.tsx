@@ -11,7 +11,7 @@ import {
   SectionProps,
   composeRenderProps,
 } from "react-aria-components";
-import { tv } from "tailwind-variants";
+import { tv, cn } from "tailwind-variants";
 import { composeTailwindRenderProps, focusRing } from "./utils";
 
 interface ListBoxProps<T> extends Omit<AriaListBoxProps<T>, "layout" | "orientation"> {}
@@ -48,7 +48,13 @@ export const itemStyles = tv({
 export function ListBoxItem(props: ListBoxItemProps) {
   let textValue = props.textValue || (typeof props.children === "string" ? props.children : undefined);
   return (
-    <AriaListBoxItem {...props} textValue={textValue} className={itemStyles}>
+    <AriaListBoxItem
+      {...props}
+      textValue={textValue}
+      className={composeRenderProps(props.className, (className, renderProps) =>
+        itemStyles({ ...renderProps, className })
+      )}
+    >
       {composeRenderProps(props.children, (children) => (
         <>
           {children}
