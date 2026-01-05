@@ -1,0 +1,59 @@
+## Objectif
+
+Santa Group est une application web simple et légère pour organiser des échanges de cadeaux (Secret Santa). Elle permet de créer des tirages au sort, d'organiser les participants en groupes, et d'effectuer automatiquement l'attribution des paires de manière équitable.
+
+> **⚠️ Important** : Comme il n'y a pas de système de connexion, vous devez **enregistrer l'URL de votre tirage** dans vos favoris pour y accéder plus tard.
+
+## Principes
+
+### Simplicité avant tout
+- **Aucune inscription requise** : pas de compte utilisateur, pas de connexion
+- **Accès par URL uniquement** : chaque tirage est identifié par une URL unique
+- **Données stockées dans le navigateur** : l'historique des tirages récents est conservé localement dans votre navigateur
+
+### Confidentialité et sécurité
+- Les tirages sont accessibles uniquement à ceux qui possèdent l'URL
+- Aucune donnée personnelle n'est collectée
+- L'historique reste privé dans votre navigateur
+
+### Fonctionnalités principales
+- Création de tirages avec groupes de participants
+- Attribution automatique respectant les contraintes de groupes (s'il y a plusieurs groupes, les personnes d'un même groupe ne peuvent pas se tirer au sort entre elles)
+- Interface simple et intuitive
+
+## Utilisation
+
+### Créer un tirage
+1. Sur la page d'accueil, entrez un nom pour votre tirage
+2. Cliquez sur "Créer"
+3. Vous êtes redirigé vers la page d'administration du tirage
+
+### Gérer un tirage
+- Ajoutez des groupes et des participants
+- Organisez les participants par glisser-déposer entre les groupes
+- Effectuez le tirage au sort une fois tous les participants ajoutés
+
+### Accéder à un tirage existant
+
+L'application conserve un historique des 10 derniers tirages consultés dans le stockage local de votre navigateur, visible sur la page d'accueil. Cependant, cet historique peut être effacé si vous :
+- Supprimez les données du navigateur
+- Utilisez le mode navigation privée
+- Changez de navigateur ou d'appareil
+
+**Recommandation** : Ajoutez toujours vos tirages importants dans vos favoris pour ne pas les perdre.
+
+## Stockage des données
+
+- **Serveur** : Les données des tirages (noms, groupes, participants, attributions) sont stockées sur le serveur
+- **Navigateur** : Seul l'historique des IDs de tirages récents est stocké localement dans votre navigateur (localStorage)
+- **Pas de synchronisation** : L'historique n'est pas synchronisé entre différents navigateurs ou appareils
+
+## Sécurité
+
+L'accès à un tirage se fait uniquement via son URL unique. Toute personne possédant l'URL peut :
+- Voir les participants et leurs attributions
+- Modifier le tirage (ajouter/supprimer des participants, …)
+- Supprimer le tirage
+
+**Conseil** : Partagez l'URL du tirage uniquement avec les personnes de confiance qui doivent administrer le tirage. Pour permettre aux participants de voir uniquement leur attribution, utilisez la page de visualisation individuelle dont vous pouvez copier le lien depuis les résultats de tirage.
+
