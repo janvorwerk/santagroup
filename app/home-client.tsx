@@ -86,7 +86,7 @@ export function HomeClient() {
     <main className="flex flex-col items-center justify-center">
       <div className="max-w-2xl w-full space-y-8">
         <div className="text-center space-y-4">
-          <h1 className="text-5xl font-bold text-gray-900">Secret Santa</h1>
+          <h1 className="text-5xl font-bold text-gray-900">Santa Group</h1>
           <p className="text-xl text-gray-600">Organise tes échanges de cadeaux</p>
         </div>
 

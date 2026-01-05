@@ -4,7 +4,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/lib/components/Button";
 
-interface PlayerData {
+interface PersonData {
   id: string;
   name: string;
   groupId: number;
@@ -17,13 +17,13 @@ interface PlayerData {
   } | null;
 }
 
-export function PlayerClient({ playerId }: { playerId: string }) {
+export function PersonClient({ personId }: { personId: string }) {
   const [isRevealed, setIsRevealed] = useState(false);
 
-  // Fetch player data using tRPC hook
-  // Note: initialPlayerData is available from server but we let the query fetch it
+  // Fetch person data using tRPC hook
+  // Note: initialPersonData is available from server but we let the query fetch it
   // to avoid type serialization issues. React Query will cache it.
-  const { data: playerData, isLoading, error } = trpc.playerGetById.useQuery(playerId);
+  const { data: personData, isLoading, error } = trpc.personGetById.useQuery(personId);
 
   const handleReveal = () => {
     setIsRevealed(true);
@@ -37,21 +37,21 @@ export function PlayerClient({ playerId }: { playerId: string }) {
     );
   }
 
-  if (error || !playerData) {
+  if (error || !personData) {
     return (
       <main className="flex items-center justify-center">
-        <div className="text-lg text-red-600">Joueur introuvable</div>
+        <div className="text-lg text-red-600">Personne introuvable</div>
       </main>
     );
   }
 
-  const hasAssignment = playerData.assignedTo !== null;
+  const hasAssignment = personData.assignedTo !== null;
 
   return (
     <main className="flex items-center justify-center">
       <div className="w-full bg-white rounded-lg shadow-lg p-8 space-y-6">
         <div className="text-center space-y-4">
-          <h1 className="text-3xl font-bold text-gray-900">Bienvenue, {playerData.name} !</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Bienvenue, {personData.name} !</h1>
           <p className="text-gray-600">
             {hasAssignment
               ? "Cliquez sur le bouton ci-dessous pour découvrir à qui vous devez offrir un cadeau."
@@ -69,7 +69,7 @@ export function PlayerClient({ playerId }: { playerId: string }) {
               <div className="text-center space-y-4 p-6 bg-blue-50 rounded-lg border-2 border-blue-200">
                 <p className="text-lg font-semibold text-gray-800">Vous devez offrir un cadeau à :</p>
                 <p className="text-3xl font-bold text-blue-600">
-                  {playerData.assignedTo?.name || "Inconnu"}
+                  {personData.assignedTo?.name || "Inconnu"}
                 </p>
               </div>
             )}

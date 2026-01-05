@@ -1,19 +1,19 @@
-import { PlayerClient } from "./player-client";
-import { getPlayerById } from "@/lib/server/pool";
+import { PersonClient } from "./person-client";
+import { getPersonById } from "@/lib/server/pool";
 import { notFound } from "next/navigation";
 
-export default async function PlayerPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PersonPage({ params }: { params: Promise<{ id: string }> }) {
   // Await params as it's now a Promise in Next.js
   const { id } = await params;
   
-  // Server-side validation: check if player exists
-  const playerData = await getPlayerById(id);
+  // Server-side validation: check if person exists
+  const personData = await getPersonById(id);
   
-  if (!playerData) {
+  if (!personData) {
     notFound();
   }
 
   // Client component will fetch the data using tRPC hooks
-  return <PlayerClient playerId={id} />;
+  return <PersonClient personId={id} />;
 }
 

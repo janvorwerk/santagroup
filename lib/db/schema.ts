@@ -15,8 +15,8 @@ export const group = pgTable("group", {
   poolId: uuid("pool_id").references(() => pool.id, { onDelete: "cascade" }),
 });
 
-export const player = pgTable(
-  "player",
+export const person = pgTable(
+  "person",
   {
     id: uuid("id")
       .primaryKey()

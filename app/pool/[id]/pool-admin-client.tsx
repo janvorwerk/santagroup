@@ -13,7 +13,7 @@ import { Fragment, useEffect, useState } from "react";
 import { isTextDropItem, useDragAndDrop } from "react-aria-components";
 import { cn } from "tailwind-variants";
 
-interface Player {
+interface Person {
   id: string;
   name: string;
   groupId: number;
@@ -23,7 +23,7 @@ interface Player {
 interface Group {
   id: number;
   poolId: string | null;
-  players: Player[];
+  persons: Person[];
 }
 
 interface PoolData {
@@ -33,12 +33,12 @@ interface PoolData {
   groups: Group[];
 }
 
-const PLAYER_DRAG_TYPE = "application/x-santa-player";
+const PERSON_DRAG_TYPE = "application/x-santa-person";
 
 export function PoolAdminClient({ poolId, cheatMode }: { poolId: string; cheatMode: boolean }) {
   const router = useRouter();
   const [poolName, setPoolName] = useState("");
-  const [newPlayerNames, setNewPlayerNames] = useState<Map<number, string>>(new Map());
+  const [newPersonNames, setNewPersonNames] = useState<Map<number, string>>(new Map());
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isCheatDialogOpen, setIsCheatDialogOpen] = useState(false);
 
@@ -84,23 +84,23 @@ export function PoolAdminClient({ poolId, cheatMode }: { poolId: string; cheatMo
     },
   });
 
-  const createPlayerMutation = trpc.playerCreate.useMutation({
+  const createPersonMutation = trpc.personCreate.useMutation({
     onSuccess: () => {
       refetch();
     },
     onError: (error) => {
-      console.error("Failed to create player", error);
-      alert("Échec de la création du joueur");
+      console.error("Failed to create person", error);
+      alert("Échec de la création de la personne");
     },
   });
 
-  const updatePlayerGroupMutation = trpc.playerUpdateGroup.useMutation({
+  const updatePersonGroupMutation = trpc.personUpdateGroup.useMutation({
     onSuccess: () => {
       refetch();
     },
     onError: (error) => {
-      console.error("Failed to move player", error);
-      alert("Échec du déplacement du joueur");
+      console.error("Failed to move person", error);
+      alert("Échec du déplacement de la personne");
     },
   });
 
@@ -134,13 +134,13 @@ export function PoolAdminClient({ poolId, cheatMode }: { poolId: string; cheatMo
     },
   });
 
-  const deletePlayerMutation = trpc.playerDelete.useMutation({
+  const deletePersonMutation = trpc.personDelete.useMutation({
     onSuccess: () => {
       refetch();
     },
     onError: (error) => {
-      console.error("Failed to delete player", error);
-      alert("Échec de la suppression du joueur");
+      console.error("Failed to delete person", error);
+      alert("Échec de la suppression de la personne");
     },
   });
 
@@ -153,22 +153,22 @@ export function PoolAdminClient({ poolId, cheatMode }: { poolId: string; cheatMo
     createGroupMutation.mutate({ poolId });
   };
 
-  const handleAddPlayer = (groupId: number) => {
-    const name = newPlayerNames.get(groupId)?.trim();
+  const handleAddPerson = (groupId: number) => {
+    const name = newPersonNames.get(groupId)?.trim();
     if (!name) return;
-    createPlayerMutation.mutate({ groupId, name });
-    setNewPlayerNames(new Map(newPlayerNames.set(groupId, "")));
+    createPersonMutation.mutate({ groupId, name });
+    setNewPersonNames(new Map(newPersonNames.set(groupId, "")));
   };
 
-  const handleMovePlayer = (playerId: string, targetGroupId: number) => {
-    updatePlayerGroupMutation.mutate({ playerId, groupId: targetGroupId });
+  const handleMovePerson = (personId: string, targetGroupId: number) => {
+    updatePersonGroupMutation.mutate({ personId, groupId: targetGroupId });
   };
 
   const handleDraw = () => {
     if (!poolData) return;
-    const totalPlayers = poolData.groups.reduce((sum, g) => sum + g.players.length, 0);
-    if (totalPlayers < 2) {
-      alert("Il faut au moins 2 joueurs pour faire le tirage");
+    const totalPersons = poolData.groups.reduce((sum, g) => sum + g.persons.length, 0);
+    if (totalPersons < 2) {
+      alert("Il faut au moins 2 personnes pour faire le tirage");
       return;
     }
     drawPoolMutation.mutate(poolId);
@@ -182,33 +182,33 @@ export function PoolAdminClient({ poolId, cheatMode }: { poolId: string; cheatMo
     deleteGroupMutation.mutate({ id: groupId });
   };
 
-  const handleDeletePlayer = (playerId: string) => {
-    deletePlayerMutation.mutate({ id: playerId });
+  const handleDeletePerson = (personId: string) => {
+    deletePersonMutation.mutate({ id: personId });
   };
 
-  // Check if drawing has been done (any player has toId)
-  const isDrawn = poolData?.groups.some((g) => g.players.some((p) => p.toId !== null)) ?? false;
+  // Check if drawing has been done (any person has toId)
+  const isDrawn = poolData?.groups.some((g) => g.persons.some((p) => p.toId !== null)) ?? false;
 
-  const getPlayUrl = (playerId: string) => {
+  const getPlayUrl = (personId: string) => {
     if (typeof window === "undefined") return "";
-    return `${window.location.origin}/play/${playerId}`;
+    return `${window.location.origin}/play/${personId}`;
   };
 
-  const getAllPlayers = () => {
+  const getAllPersons = () => {
     if (!poolData) return [];
-    return poolData.groups.flatMap((g) => g.players);
+    return poolData.groups.flatMap((g) => g.persons);
   };
 
   const getDrawResults = () => {
     if (!poolData) return [];
-    const allPlayers = getAllPlayers();
-    return allPlayers
+    const allPersons = getAllPersons();
+    return allPersons
       .filter((p) => p.toId !== null)
       .map((p) => {
-        const toPlayer = allPlayers.find((player) => player.id === p.toId);
+        const toPerson = allPersons.find((person) => person.id === p.toId);
         return {
           from: p.name,
-          to: toPlayer?.name || "Inconnu",
+          to: toPerson?.name || "Inconnu",
         };
       });
   };
@@ -262,12 +262,12 @@ export function PoolAdminClient({ poolId, cheatMode }: { poolId: string; cheatMo
               group={group}
               allGroups={poolData.groups}
               isDrawn={isDrawn}
-              newPlayerName={newPlayerNames.get(group.id) || ""}
-              onNewPlayerNameChange={(name) => setNewPlayerNames(new Map(newPlayerNames.set(group.id, name)))}
-              onAddPlayer={() => handleAddPlayer(group.id)}
-              onMovePlayer={handleMovePlayer}
+              newPersonName={newPersonNames.get(group.id) || ""}
+              onNewPersonNameChange={(name) => setNewPersonNames(new Map(newPersonNames.set(group.id, name)))}
+              onAddPerson={() => handleAddPerson(group.id)}
+              onMovePerson={handleMovePerson}
               onDeleteGroup={() => handleDeleteGroup(group.id)}
-              onDeletePlayer={handleDeletePlayer}
+              onDeletePerson={handleDeletePerson}
             />
           ))}
         </div>
@@ -283,7 +283,7 @@ export function PoolAdminClient({ poolId, cheatMode }: { poolId: string; cheatMo
         <div className="bg-white rounded-lg shadow-lg p-6">
           <Button
             onPress={handleDraw}
-            isDisabled={drawPoolMutation.isPending || getAllPlayers().length < 2}
+            isDisabled={drawPoolMutation.isPending || getAllPersons().length < 2}
             className="w-full"
           >
             {drawPoolMutation.isPending ? "Tirage en cours..." : "Effectuer le tirage au sort"}
@@ -293,31 +293,31 @@ export function PoolAdminClient({ poolId, cheatMode }: { poolId: string; cheatMo
 
       {isDrawn && (
         <div className="bg-white rounded-lg shadow-lg p-6 space-y-4">
-          <h2 className="text-2xl font-semibold text-gray-800">Liens des joueurs</h2>
+          <h2 className="text-2xl font-semibold text-gray-800">Résultat</h2>
           <p className="text-gray-600">
-            Envoyez un email à chaque joueur pour qu'il puisse voir à qui il doit offrir un cadeau :
+            Envoyez son lien personnel à chaque personne pour qu'elle puisse voir à qui il doit offrir un cadeau :
           </p>
           <div className="space-y-2">
-            {getAllPlayers().map((player) => {
-              const playUrl = getPlayUrl(player.id);
+            {getAllPersons().map((person) => {
+              const playUrl = getPlayUrl(person.id);
               const mailtoUrl = `mailto:?subject=${encodeURIComponent(
-                `${player.name}, participe au tirage de ${poolData.name} !`
+                `${person.name}, participe au tirage de ${poolData.name} !`
               )}&body=${encodeURIComponent(
-                `${player.name}, pour participer au tirage de ${poolData.name}, clique sur ce lien ${playUrl}`
+                `${person.name}, pour participer au tirage de ${poolData.name}, clique sur ce lien ${playUrl}`
               )}`;
               return (
-                <div key={player.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded">
-                  <span className="font-medium flex-1">{player.name}</span>
-                  <a href={mailtoUrl} target="santagroup" className={button({ variant: "primary" })}>
-                    Envoyer un e-mail
-                  </a>
+                <div key={person.id} className="max-w-3xl flex items-center gap-4 p-3 bg-gray-50 rounded">
+                  <span className="font-medium flex-1">{person.name}</span>
                   <Button
                     onPress={async () => {
                       await navigator.clipboard.writeText(playUrl);
                     }}
                   >
                     {"Copier le lien"}
-                  </Button>
+                  </Button>{" "}
+                  <a href={mailtoUrl} target="santagroup" className={button({ variant: "primary" })}>
+                    Envoyer un e-mail
+                  </a>
                 </div>
               );
             })}
@@ -354,7 +354,7 @@ export function PoolAdminClient({ poolId, cheatMode }: { poolId: string; cheatMo
           onAction={handleDeletePool}
         >
           Êtes-vous sûr de vouloir supprimer ce tirage ? Cette action est irréversible et supprimera tous les groupes et
-          joueurs associés.
+          personnes associées.
         </AlertDialog>
       </Modal>
 
@@ -383,47 +383,47 @@ interface GroupListBoxProps {
   group: Group;
   allGroups: Group[];
   isDrawn: boolean;
-  newPlayerName: string;
-  onNewPlayerNameChange: (name: string) => void;
-  onAddPlayer: () => void;
-  onMovePlayer: (playerId: string, targetGroupId: number) => void;
+  newPersonName: string;
+  onNewPersonNameChange: (name: string) => void;
+  onAddPerson: () => void;
+  onMovePerson: (personId: string, targetGroupId: number) => void;
   onDeleteGroup: () => void;
-  onDeletePlayer: (playerId: string) => void;
+  onDeletePerson: (personId: string) => void;
 }
 
 function GroupListBox({
   group,
   isDrawn,
-  newPlayerName,
-  onNewPlayerNameChange,
-  onAddPlayer,
-  onMovePlayer,
+  newPersonName,
+  onNewPersonNameChange,
+  onAddPerson,
+  onMovePerson,
   onDeleteGroup,
-  onDeletePlayer,
+  onDeletePerson,
 }: GroupListBoxProps) {
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
 
   const { dragAndDropHooks } = useDragAndDrop({
     getItems(keys) {
       if (isDrawn) return [];
       return Array.from(keys).map((key) => ({
-        [PLAYER_DRAG_TYPE]: key as string,
-        "text/plain": group.players.find((p) => p.id === key)?.name || "",
+        [PERSON_DRAG_TYPE]: key as string,
+        "text/plain": group.persons.find((p) => p.id === key)?.name || "",
       }));
     },
-    acceptedDragTypes: isDrawn ? [] : [PLAYER_DRAG_TYPE],
+    acceptedDragTypes: isDrawn ? [] : [PERSON_DRAG_TYPE],
     async onRootDrop(e) {
       if (isDrawn) return;
       const items = await Promise.all(
         e.items.filter(isTextDropItem).map(async (item) => {
-          const playerId = await item.getText(PLAYER_DRAG_TYPE);
-          return playerId;
+          const personId = await item.getText(PERSON_DRAG_TYPE);
+          return personId;
         })
       );
 
-      for (const playerId of items) {
-        if (playerId && group.players.every((p) => p.id !== playerId)) {
-          onMovePlayer(playerId, group.id);
+      for (const personId of items) {
+        if (personId && group.persons.every((p) => p.id !== personId)) {
+          onMovePerson(personId, group.id);
         }
       }
     },
@@ -439,34 +439,34 @@ function GroupListBox({
         <Button
           variant="secondary"
           onPress={() => {
-            if (group.players.length === 0) {
+            if (group.persons.length === 0) {
               onDeleteGroup();
-            } else if (selectedPlayerId) {
-              onDeletePlayer(selectedPlayerId);
+            } else if (selectedPersonId) {
+              onDeletePerson(selectedPersonId);
             }
           }}
           className="max-w-fit self-end"
-          isDisabled={group.players.length > 0 && !selectedPlayerId}
+          isDisabled={group.persons.length > 0 && !selectedPersonId}
         >
           <Trash2 className="w-4 h-auto" />
-          {group.players.length === 0 ? <span>Supprimer le groupe</span> : <span>Supprimer le joueur</span>}
+          {group.persons.length === 0 ? <span>Supprimer le groupe</span> : <span>Supprimer la personne</span>}
         </Button>
       )}
       <ListBox
-        items={group.players}
+        items={group.persons}
         dragAndDropHooks={dragAndDropHooks}
         selectionMode={isDrawn ? "none" : "single"}
-        selectedKeys={selectedPlayerId ? [selectedPlayerId] : []}
+        selectedKeys={selectedPersonId ? [selectedPersonId] : []}
         onSelectionChange={(keys) => {
           const selected = Array.from(keys)[0] as string | undefined;
-          setSelectedPlayerId(selected ?? null);
+          setSelectedPersonId(selected ?? null);
         }}
         className={cn("min-h-[200px] flex-1 w-full", isDrawn && "opacity-50")}
       >
-        {(player: Player) => (
-          <ListBoxItem id={player.id} textValue={player.name}>
+        {(person: Person) => (
+          <ListBoxItem id={person.id} textValue={person.name}>
             <div className="flex items-center justify-between w-full">
-              <span>{player.name}</span>
+              <span>{person.name}</span>
             </div>
           </ListBoxItem>
         )}
@@ -474,17 +474,17 @@ function GroupListBox({
       {!isDrawn && (
         <div className="flex gap-2">
           <TextField
-            placeholder="Nom du joueur"
-            value={newPlayerName}
-            onChange={onNewPlayerNameChange}
+            placeholder="Nom de la personne"
+            value={newPersonName}
+            onChange={onNewPersonNameChange}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                onAddPlayer();
+                onAddPerson();
               }
             }}
             className="flex-1 placeholder-shown:text-zinc-500"
           />
-          <Button onPress={onAddPlayer} isDisabled={!newPlayerName.trim()}>
+          <Button onPress={onAddPerson} isDisabled={!newPersonName.trim()}>
             Ajouter
           </Button>
         </div>

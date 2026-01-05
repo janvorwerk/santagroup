@@ -26,14 +26,14 @@ export const appRouter = router({
       return await poolService.updatePoolName(opts.input.id, opts.input.name);
     }),
 
-  // Get pool with groups and players (nested)
+  // Get pool with groups and persons (nested)
   poolGetFull: publicProcedure
     .input(z.uuid())
     .query(async (opts) => {
       return await poolService.getPoolFull(opts.input);
     }),
 
-  // Get multiple pools with groups and players (nested)
+  // Get multiple pools with groups and persons (nested)
   poolGetFullMany: publicProcedure
     .input(z.array(z.uuid()))
     .query(async (opts) => {
@@ -51,8 +51,8 @@ export const appRouter = router({
       return await poolService.createGroup(opts.input.poolId);
     }),
 
-  // Add player to a group
-  playerCreate: publicProcedure
+  // Add person to a group
+  personCreate: publicProcedure
     .input(
       z.object({
         groupId: z.number().int(),
@@ -60,26 +60,26 @@ export const appRouter = router({
       })
     )
     .mutation(async (opts) => {
-      return await poolService.createPlayer(opts.input.groupId, opts.input.name);
+      return await poolService.createPerson(opts.input.groupId, opts.input.name);
     }),
 
-  // Move player between groups
-  playerUpdateGroup: publicProcedure
+  // Move person between groups
+  personUpdateGroup: publicProcedure
     .input(
       z.object({
-        playerId: z.uuid(),
+        personId: z.uuid(),
         groupId: z.number().int(),
       })
     )
     .mutation(async (opts) => {
-      return await poolService.updatePlayerGroup(opts.input.playerId, opts.input.groupId);
+      return await poolService.updatePersonGroup(opts.input.personId, opts.input.groupId);
     }),
 
-  // Get player by ID with their assignment
-  playerGetById: publicProcedure
+  // Get person by ID with their assignment
+  personGetById: publicProcedure
     .input(z.uuid())
     .query(async (opts) => {
-      return await poolService.getPlayerById(opts.input);
+      return await poolService.getPersonById(opts.input);
     }),
 
   // Execute drawing algorithm
@@ -111,15 +111,15 @@ export const appRouter = router({
       return await poolService.deleteGroup(opts.input.id);
     }),
 
-  // Delete a player
-  playerDelete: publicProcedure
+  // Delete a person
+  personDelete: publicProcedure
     .input(
       z.object({
         id: z.uuid(),
       })
     )
     .mutation(async (opts) => {
-      return await poolService.deletePlayer(opts.input.id);
+      return await poolService.deletePerson(opts.input.id);
     }),
 });
 

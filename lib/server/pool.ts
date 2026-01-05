@@ -1,11 +1,11 @@
 import { db } from "@/lib/db";
-import { pool, group, player } from "@/lib/db/schema";
+import { pool, group, person } from "@/lib/db/schema";
 import { eq, inArray, sql, and, desc } from "drizzle-orm";
 
-type GroupWithPlayers = {
+type GroupWithPersons = {
   id: number;
   poolId: string | null;
-  players: Array<{
+  persons: Array<{
     id: string;
     name: string;
     groupId: number;
@@ -13,11 +13,11 @@ type GroupWithPlayers = {
   }>;
 };
 
-export interface PoolWithGroupsAndPlayers {
+export interface PoolWithGroupsAndPersons {
   id: string;
   name: string;
   createdAt: Date;
-  groups: GroupWithPlayers[];
+  groups: GroupWithPersons[];
 }
 
 /**
@@ -42,60 +42,60 @@ export async function updatePoolName(id: string, name: string) {
 }
 
 /**
- * Get pool with groups and players (nested)
+ * Get pool with groups and persons (nested)
  */
-export async function getPoolFull(poolId: string): Promise<PoolWithGroupsAndPlayers | null> {
-  // CTE: Players aggregated by group
-  const playersByGroup = db
+export async function getPoolFull(poolId: string): Promise<PoolWithGroupsAndPersons | null> {
+  // CTE: Persons aggregated by group
+  const personsByGroup = db
     .select({
-      groupId: player.groupId,
-      players: sql<GroupWithPlayers["players"]>`
+      groupId: person.groupId,
+      persons: sql<GroupWithPersons["persons"]>`
         json_agg(
           jsonb_build_object(
-            'id', ${player.id},
-            'name', ${player.name},
-            'groupId', ${player.groupId},
-            'toId', ${player.toId}
+            'id', ${person.id},
+            'name', ${person.name},
+            'groupId', ${person.groupId},
+            'toId', ${person.toId}
           )
-        order by ${player.name}
+        order by ${person.name}
         )
-      `.as("players"),
+      `.as("persons"),
     })
-    .from(player)
-    .groupBy(player.groupId)
-    .as("players_by_group");
+    .from(person)
+    .groupBy(person.groupId)
+    .as("persons_by_group");
 
-  // CTE: Groups with their players
-  const groupsWithPlayers = db
+  // CTE: Groups with their persons
+  const groupsWithPersons = db
     .select({
       id: group.id,
       poolId: group.poolId,
-      players: sql<GroupWithPlayers["players"]>`
-        COALESCE(${playersByGroup.players}, '[]'::json)
-      `.as("players"),
+      persons: sql<GroupWithPersons["persons"]>`
+        COALESCE(${personsByGroup.persons}, '[]'::json)
+      `.as("persons"),
     })
     .from(group)
-    .leftJoin(playersByGroup, eq(group.id, playersByGroup.groupId))
+    .leftJoin(personsByGroup, eq(group.id, personsByGroup.groupId))
     .where(eq(group.poolId, poolId))
-    .as("groups_with_players");
+    .as("groups_with_persons");
 
   // CTE: Groups aggregated by pool
   const groupsByPool = db
     .select({
-      poolId: groupsWithPlayers.poolId,
-      groups: sql<GroupWithPlayers[]>`
+      poolId: groupsWithPersons.poolId,
+      groups: sql<GroupWithPersons[]>`
         json_agg(
           jsonb_build_object(
-            'id', ${groupsWithPlayers.id},
-            'poolId', ${groupsWithPlayers.poolId},
-            'players', ${groupsWithPlayers.players}
+            'id', ${groupsWithPersons.id},
+            'poolId', ${groupsWithPersons.poolId},
+            'persons', ${groupsWithPersons.persons}
           )
-          order by ${groupsWithPlayers.id}
+          order by ${groupsWithPersons.id}
         )
       `.as("groups"),
     })
-    .from(groupsWithPlayers)
-    .groupBy(groupsWithPlayers.poolId)
+    .from(groupsWithPersons)
+    .groupBy(groupsWithPersons.poolId)
     .as("groups_by_pool");
 
   // Main query: pool with aggregated groups
@@ -104,7 +104,7 @@ export async function getPoolFull(poolId: string): Promise<PoolWithGroupsAndPlay
       id: pool.id,
       name: pool.name,
       createdAt: pool.createdAt,
-      groups: sql<GroupWithPlayers[]>`
+      groups: sql<GroupWithPersons[]>`
         COALESCE(${groupsByPool.groups}, '[]'::json)
       `.as("groups"),
     })
@@ -119,66 +119,66 @@ export async function getPoolFull(poolId: string): Promise<PoolWithGroupsAndPlay
     id: result[0].id,
     name: result[0].name,
     createdAt: result[0].createdAt,
-    groups: (result[0].groups || []) as GroupWithPlayers[],
+    groups: (result[0].groups || []) as GroupWithPersons[],
   };
 }
 
 /**
- * Get multiple pools with groups and players (nested)
+ * Get multiple pools with groups and persons (nested)
  */
-export async function getPoolsFull(poolIds: string[]): Promise<PoolWithGroupsAndPlayers[]> {
+export async function getPoolsFull(poolIds: string[]): Promise<PoolWithGroupsAndPersons[]> {
   if (poolIds.length === 0) return [];
 
-  // CTE: Players aggregated by group
-  const playersByGroup = db
+  // CTE: Persons aggregated by group
+  const personsByGroup = db
     .select({
-      groupId: player.groupId,
-      players: sql<GroupWithPlayers["players"]>`
+      groupId: person.groupId,
+      persons: sql<GroupWithPersons["persons"]>`
         json_agg(
           jsonb_build_object(
-            'id', ${player.id},
-            'name', ${player.name},
-            'groupId', ${player.groupId},
-            'toId', ${player.toId}
+            'id', ${person.id},
+            'name', ${person.name},
+            'groupId', ${person.groupId},
+            'toId', ${person.toId}
           )
-        order by ${player.name}
+        order by ${person.name}
         )
-      `.as("players"),
+      `.as("persons"),
     })
-    .from(player)
-    .groupBy(player.groupId)
-    .as("players_by_group");
+    .from(person)
+    .groupBy(person.groupId)
+    .as("persons_by_group");
 
-  // CTE: Groups with their players
-  const groupsWithPlayers = db
+  // CTE: Groups with their persons
+  const groupsWithPersons = db
     .select({
       id: group.id,
       poolId: group.poolId,
-      players: sql<GroupWithPlayers["players"]>`
-        COALESCE(${playersByGroup.players}, '[]'::json)
-      `.as("players"),
+      persons: sql<GroupWithPersons["persons"]>`
+        COALESCE(${personsByGroup.persons}, '[]'::json)
+      `.as("persons"),
     })
     .from(group)
-    .leftJoin(playersByGroup, eq(group.id, playersByGroup.groupId))
-    .as("groups_with_players");
+    .leftJoin(personsByGroup, eq(group.id, personsByGroup.groupId))
+    .as("groups_with_persons");
 
   // CTE: Groups aggregated by pool
   const groupsByPool = db
     .select({
-      poolId: groupsWithPlayers.poolId,
-      groups: sql<GroupWithPlayers[]>`
+      poolId: groupsWithPersons.poolId,
+      groups: sql<GroupWithPersons[]>`
         json_agg(
           jsonb_build_object(
-            'id', ${groupsWithPlayers.id},
-            'poolId', ${groupsWithPlayers.poolId},
-            'players', ${groupsWithPlayers.players}
+            'id', ${groupsWithPersons.id},
+            'poolId', ${groupsWithPersons.poolId},
+            'persons', ${groupsWithPersons.persons}
           )
-          order by ${groupsWithPlayers.id}
+          order by ${groupsWithPersons.id}
         )
       `.as("groups"),
     })
-    .from(groupsWithPlayers)
-    .groupBy(groupsWithPlayers.poolId)
+    .from(groupsWithPersons)
+    .groupBy(groupsWithPersons.poolId)
     .as("groups_by_pool");
 
   // Main query: pools with aggregated groups
@@ -187,7 +187,7 @@ export async function getPoolsFull(poolIds: string[]): Promise<PoolWithGroupsAnd
       id: pool.id,
       name: pool.name,
       createdAt: pool.createdAt,
-      groups: sql<GroupWithPlayers[]>`
+      groups: sql<GroupWithPersons[]>`
         COALESCE(${groupsByPool.groups}, '[]'::json)
       `.as("groups"),
     })
@@ -200,7 +200,7 @@ export async function getPoolsFull(poolIds: string[]): Promise<PoolWithGroupsAnd
     id: row.id,
     name: row.name,
     createdAt: row.createdAt,
-    groups: (row.groups || []) as GroupWithPlayers[],
+    groups: (row.groups || []) as GroupWithPersons[],
   }));
 }
 
@@ -218,11 +218,11 @@ export async function createGroup(poolId: string) {
 }
 
 /**
- * Add player to a group
+ * Add person to a group
  */
-export async function createPlayer(groupId: number, name: string) {
+export async function createPerson(groupId: number, name: string) {
   const result = await db
-    .insert(player)
+    .insert(person)
     .values({
       groupId,
       name,
@@ -232,15 +232,15 @@ export async function createPlayer(groupId: number, name: string) {
 }
 
 /**
- * Move player between groups
+ * Move person between groups
  */
-export async function updatePlayerGroup(playerId: string, groupId: number) {
+export async function updatePersonGroup(personId: string, groupId: number) {
   // Build scalar subqueries using Drizzle - select the column directly
   const currentGroupPool = sql`
     (SELECT ${group.poolId}
      FROM ${group}
-     INNER JOIN ${player} ON ${group.id} = ${player.groupId}
-     WHERE ${player.id} = ${playerId}
+     INNER JOIN ${person} ON ${group.id} = ${person.groupId}
+     WHERE ${person.id} = ${personId}
      LIMIT 1)
   `;
 
@@ -253,32 +253,32 @@ export async function updatePlayerGroup(playerId: string, groupId: number) {
 
   // Update only if both groups are in the same pool
   const result = await db
-    .update(player)
+    .update(person)
     .set({ groupId })
-    .where(and(eq(player.id, playerId), sql`${currentGroupPool} = ${targetGroupPool}`))
+    .where(and(eq(person.id, personId), sql`${currentGroupPool} = ${targetGroupPool}`))
     .returning();
 
   return result[0];
 }
 
 /**
- * Get player by ID with their assignment
+ * Get person by ID with their assignment
  */
-export async function getPlayerById(playerId: string) {
-  const playerData = await db.select().from(player).where(eq(player.id, playerId)).limit(1);
-  if (!playerData[0]) return null;
+export async function getPersonById(personId: string) {
+  const personData = await db.select().from(person).where(eq(person.id, personId)).limit(1);
+  if (!personData[0]) return null;
 
-  const assignedTo = playerData[0].toId
-    ? await db.select().from(player).where(eq(player.id, playerData[0].toId)).limit(1)
+  const assignedTo = personData[0].toId
+    ? await db.select().from(person).where(eq(person.id, personData[0].toId)).limit(1)
     : null;
 
   return {
-    ...playerData[0],
+    ...personData[0],
     assignedTo: assignedTo?.[0] || null,
   };
 }
 
-type Player = {
+type Person = {
   id: string;
   name: string;
   groupId: number;
@@ -287,39 +287,39 @@ type Player = {
 
 /**
  * Perform the drawing algorithm without database access
- * @param players Array of players to assign
- * @returns Map of playerId -> toId assignments
- * @throws Error if less than 2 players or no valid assignments can be found
+ * @param persons Array of persons to assign
+ * @returns Map of personId -> toId assignments
+ * @throws Error if less than 2 persons or no valid assignments can be found
  */
-export function performDraw(players: Player[]): Record<string, string> {
-  if (players.length < 2) {
-    throw new Error("Il faut au moins deux joueurs pour tirer au sort");
+export function performDraw(persons: Person[]): Record<string, string> {
+  if (persons.length < 2) {
+    throw new Error("Il faut au moins deux personnes pour tirer au sort");
   }
 
-  // Group players by groupId
-  const playersByGroup = new Map<number, Player[]>();
-  for (const p of players) {
-    if (!playersByGroup.has(p.groupId)) {
-      playersByGroup.set(p.groupId, []);
+  // Group persons by groupId
+  const personsByGroup = new Map<number, Person[]>();
+  for (const p of persons) {
+    if (!personsByGroup.has(p.groupId)) {
+      personsByGroup.set(p.groupId, []);
     }
-    playersByGroup.get(p.groupId)!.push(p);
+    personsByGroup.get(p.groupId)!.push(p);
   }
 
-  // Check if there's at least one group with players that can be matched
+  // Check if there's at least one group with persons that can be matched
   // (i.e., there are at least 2 groups)
-  if (playersByGroup.size < 2) {
+  if (personsByGroup.size < 2) {
     throw new Error("Je n'ai pas réussi à trouver de combinaison : essaie de changer les groupes");
   }
 
-  // Build valid targets for each player (exclude same group)
-  const validTargets = new Map<string, Player[]>();
-  for (const p of players) {
-    const targets = players.filter((target) => target.groupId !== p.groupId);
+  // Build valid targets for each person (exclude same group)
+  const validTargets = new Map<string, Person[]>();
+  for (const p of persons) {
+    const targets = persons.filter((target) => target.groupId !== p.groupId);
     validTargets.set(p.id, targets);
   }
 
-  // Check if each player has at least one valid target
-  for (const p of players) {
+  // Check if each person has at least one valid target
+  for (const p of persons) {
     const targets = validTargets.get(p.id) || [];
     if (targets.length === 0) {
       throw new Error("Je n'ai pas réussi à trouver de combinaison : essaie de changer les groupes");
@@ -327,51 +327,51 @@ export function performDraw(players: Player[]): Record<string, string> {
   }
 
   // Use backtracking algorithm to find a valid assignment
-  const assignments = new Map<string, string>(); // playerId -> toId
+  const assignments = new Map<string, string>(); // personId -> toId
   const used = new Set<string>(); // toIds that have been assigned
 
-  // Shuffle players for randomness
-  const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
+  // Shuffle persons for randomness
+  const shuffledPersons = [...persons].sort(() => Math.random() - 0.5);
 
   /**
    * Backtracking function to find a valid assignment
-   * @param index Current index in the players array
+   * @param index Current index in the persons array
    * @returns true if a valid assignment was found, false otherwise
    */
   function backtrack(index: number): boolean {
-    // Base case: all players have been assigned
-    if (index >= shuffledPlayers.length) {
+    // Base case: all persons have been assigned
+    if (index >= shuffledPersons.length) {
       return true;
     }
 
-    const currentPlayer = shuffledPlayers[index];
-    const targets = validTargets.get(currentPlayer.id) || [];
+    const currentPerson = shuffledPersons[index];
+    const targets = validTargets.get(currentPerson.id) || [];
     
     // Shuffle targets for randomness
     const shuffledTargets = [...targets].sort(() => Math.random() - 0.5);
     
     // Try each available target
     for (const target of shuffledTargets) {
-      // Skip if target is already used or is the same player
-      if (used.has(target.id) || target.id === currentPlayer.id) {
+      // Skip if target is already used or is the same person
+      if (used.has(target.id) || target.id === currentPerson.id) {
         continue;
       }
 
       // Try this assignment
-      assignments.set(currentPlayer.id, target.id);
+      assignments.set(currentPerson.id, target.id);
       used.add(target.id);
 
-      // Recursively try to assign remaining players
+      // Recursively try to assign remaining persons
       if (backtrack(index + 1)) {
         return true;
       }
 
       // Backtrack: remove this assignment and try next target
-      assignments.delete(currentPlayer.id);
+      assignments.delete(currentPerson.id);
       used.delete(target.id);
     }
 
-    // No valid assignment found for this player
+    // No valid assignment found for this person
     return false;
   }
 
@@ -380,7 +380,7 @@ export function performDraw(players: Player[]): Record<string, string> {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     assignments.clear();
     used.clear();
-    shuffledPlayers.sort(() => Math.random() - 0.5);
+    shuffledPersons.sort(() => Math.random() - 0.5);
 
     if (backtrack(0)) {
       return Object.fromEntries(assignments);
@@ -395,24 +395,24 @@ export function performDraw(players: Player[]): Record<string, string> {
  * Execute drawing algorithm
  */
 export async function drawPool(poolId: string) {
-  // Get all players in the pool
-  const allPlayersForPool = await db
+  // Get all persons in the pool
+  const allPersonsForPool = await db
     .select({
-      player: player,
+      person: person,
     })
-    .from(player)
-    .innerJoin(group, eq(player.groupId, group.id))
+    .from(person)
+    .innerJoin(group, eq(person.groupId, group.id))
     .where(eq(group.poolId, poolId));
 
-  const players = allPlayersForPool.map((row) => row.player);
+  const persons = allPersonsForPool.map((row) => row.person);
 
   // Perform the draw
-  const assignments = performDraw(players);
+  const assignments = performDraw(persons);
 
   // Update database with assignments
   await db.transaction(async (tx) => {
-    for (const [playerId, toId] of Object.entries(assignments)) {
-      await tx.update(player).set({ toId }).where(eq(player.id, playerId));
+    for (const [personId, toId] of Object.entries(assignments)) {
+      await tx.update(person).set({ toId }).where(eq(person.id, personId));
     }
   });
 
@@ -420,22 +420,22 @@ export async function drawPool(poolId: string) {
 }
 
 /**
- * Delete a pool (cascades to groups and players via DB constraints)
+ * Delete a pool (cascades to groups and persons via DB constraints)
  */
 export async function deletePool(poolId: string) {
   await db.delete(pool).where(eq(pool.id, poolId));
 }
 
 /**
- * Delete a group (cascades to players via DB constraints)
+ * Delete a group (cascades to persons via DB constraints)
  */
 export async function deleteGroup(groupId: number) {
   await db.delete(group).where(eq(group.id, groupId));
 }
 
 /**
- * Delete a player
+ * Delete a person
  */
-export async function deletePlayer(playerId: string) {
-  await db.delete(player).where(eq(player.id, playerId));
+export async function deletePerson(personId: string) {
+  await db.delete(person).where(eq(person.id, personId));
 }
